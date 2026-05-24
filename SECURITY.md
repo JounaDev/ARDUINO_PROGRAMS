@@ -12,6 +12,7 @@ Only actively maintained versions receive security updates, patches, and hotfixe
 
 | Version Range | Status               | Security Support |
 |--------------|---------------------|------------------|
+| 3.0.x        | Realeses (BETA)     | :white_check_mark: |
 | 2.0.x        | Stable (current)     | :white_check_mark: |
 | 1.5.x        | Legacy LTS           | :white_check_mark: |
 | 1.0.x        | Deprecated           | :x:               |
