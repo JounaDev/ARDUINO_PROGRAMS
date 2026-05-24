@@ -1,0 +1,700 @@
+//DIRECTIVAS DE PREPROCESADO
+#include <Servo.h>
+#include <avr/pgmspace.h>
+
+struct CONFIG_GENERALES {
+
+  //ELEMENTOS INDICADORES Y VISUALES
+
+  int PIN_BUZZER;         //  BUZZER INTELIGENTE Y SENSITIVO
+  int PIN_LEDS;           // LEDS DE CAMINO INTELIGENTE
+  int PIN_BOTON_START;    //  BOTON DE INICIALIZACION
+  int PIN_BOTON_RESET;    // BOTON CREADO PARA INCIALIZAR PROTOCOLO DE REINICIO A VALORES DEFAULT
+  int PIN_LED_POWER_ON;   // LED INDICADOR DE ENCENDIDO
+  int PIN_LED_POWER_OFF;  //LED INDICADOR DE STANDBY
+  //SENSORES DE MOVIMIENTO , PRESION , SONIDO ETC..
+
+  int PIN_SENSOR_IR;                //SENSOR INFLAROJO DETECTA OBJETOS
+  int PIN_SENSOR_PRESION_INFERIOR;  // SENSOR DE PLATAFORMA DE PRESION
+  int PIN_SENSOR_ULTRASONICO;       // SENSOR DE MOVIMIENTO
+  int PIN_SERVO_RAMPA;              // SERVO SUPERIOR
+
+  //VALORES FISICOS
+  unsigned long TIME_RESET_TIME;
+  unsigned long DEBOUNCE_DELAY;
+};
+
+
+// SISTEMA DE DEPURACION
+enum DEPURING_LEVEL_CORE {  //HERRAMIENTA EXCLUSIVAMENTE PARA DESAARROLLADORES DEFAULT NIVEL 3 CONSULTAR COMANDOS DE ACTIVACION B1+B2
+
+  LOG_NONE,     //   NIVEL CON PERMISOS LIMITADOS CAPA DE PROTECCION DE DATOS (PRODUCCION)
+  LOG_INFO,     //NIVEL 0 NIVEL DEPURACION ACCESO A DATOS DE FUNCIONAMIENTO Y ESTADO DE MAQUINA
+  LOG_WARNING,  // NIVEL 1 FALLO EN FUNCIONAMENTO, ERROR DE CALIBRACION,  O SINCRONIZACION INPRESISA
+  LOG_ERROR,    //  NIVEL 2 FALLO DE HARDWARE Y COMUNICACION DE COMPONENTES, KERNEL FAILURE
+
+
+};
+
+DEPURING_LEVEL_CORE LOG_SYSTEM = LOG_NONE;  // SI ES NONE (PRODUCCION) SI ES OTRO (DESARROLLO)
+
+//INICIALIZACION DE DATOS POR MEDIO DE CONSTEXPR
+
+constexpr CONFIG_GENERALES CONFIG_GENERALES_HARDWARE = {
+  3,   //BUZZER
+  2,   //LEDS
+  A0,  // PIN_START
+  A1,  // PIN_RESET
+  2,   //LED ENCENDIDO
+  7,   //LED APAGADO
+  // de 1~A1 PIN_BUZZER A PIN_BOTON_RESET
+  12,  //SENSOR_IR
+  6,  //SENSOR_PRESION
+  5,  //SENSOR ULTRA SONICO
+  11,  // SERVO RAMPA
+2000, //2 Segundos reset
+50, //
+
+};
+
+
+
+void LOGS_SISTEM_CORE(DEPURING_LEVEL_CORE level, const char* MENSAJE_ESTADO) {
+
+  if (LOG_SYSTEM == LOG_INFO) return;  // MODO PRODUCCION
+  if (level < LOG_SYSTEM) return;
+
+  //SELECTOR DE CASOS SWITCH Y SALIDA DE PROGRAMA CON BREAK
+  switch (level) {
+    case LOG_INFO: Serial.print(F("[INFO  ]")); break;
+    case LOG_WARNING: Serial.print(F("[WARNING  ]")); break;
+    case LOG_ERROR: Serial.print(F("[ERROR  ]")); break;
+    case LOG_NONE: Serial.print(F("[NONE ]")); break;
+
+    default: return;
+  }
+  Serial.println(MENSAJE_ESTADO);
+}
+//MACROS
+#define LOG_W(MENSAJE_ESTADO) LOGS_SISTEM_CORE(LOG_WARNING, MENSAJE_ESTADO);
+#define LOG_I(MENSAJE_ESTADO) LOGS_SISTEM_CORE(LOG_INFO, MENSAJE_ESTADO);
+#define LOG_E(MENSAJE_ESTADO) LOGS_SISTEM_CORE(LOG_ERROR, MENSAJE_ESTADO);
+
+
+// FUNCIONES CLASS OOP
+
+
+class TIMER_MICROS {
+private:
+  unsigned long TIEMPO_ESTABLECIDO;
+  unsigned long TIEMPO_INICIO;
+
+public:
+  TIMER_MICROS(unsigned long TIEMPO)
+    : TIEMPO_ESTABLECIDO(TIEMPO), TIEMPO_INICIO(0) {
+  }
+  void Inicio() {
+
+    TIEMPO_INICIO = micros();
+  }
+
+  bool CONTEO_TERMINADO() {
+
+    if (micros() - TIEMPO_INICIO >= TIEMPO_ESTABLECIDO) {
+
+      LOG_I("TIEMPO CUMPLIDO ");
+      return true;
+
+    } else {
+
+      return false;
+    }
+  }
+};
+
+
+
+
+//NOTAS CANCIONES//
+
+#define REST 0
+#define NOTE_B0 31
+#define NOTE_C1 33
+#define NOTE_CS1 35
+#define NOTE_D1 37
+#define NOTE_DS1 39
+#define NOTE_E1 41
+#define NOTE_F1 44
+#define NOTE_FS1 46
+#define NOTE_G1 49
+#define NOTE_GS1 52
+#define NOTE_A1 55
+#define NOTE_AS1 58
+#define NOTE_B1 62
+#define NOTE_C2 65
+#define NOTE_CS2 69
+#define NOTE_D2 73
+#define NOTE_DS2 78
+#define NOTE_E2 82
+#define NOTE_F2 87
+#define NOTE_FS2 93
+#define NOTE_G2 98
+#define NOTE_GS2 104
+#define NOTE_A2 110
+#define NOTE_AS2 117
+#define NOTE_B2 123
+#define NOTE_C3 131
+#define NOTE_CS3 139
+#define NOTE_D3 147
+#define NOTE_DS3 156
+#define NOTE_E3 165
+#define NOTE_F3 175
+#define NOTE_FS3 185
+#define NOTE_G3 196
+#define NOTE_GS3 208
+#define NOTE_A3 220
+#define NOTE_AS3 233
+#define NOTE_B3 247
+#define NOTE_C4 262
+#define NOTE_CS4 277
+#define NOTE_D4 294
+#define NOTE_DS4 311
+#define NOTE_E4 330
+#define NOTE_F4 349
+#define NOTE_FS4 370
+#define NOTE_G4 392
+#define NOTE_GS4 415
+#define NOTE_A4 440
+#define NOTE_AS4 466
+#define NOTE_B4 494
+#define NOTE_C5 523
+#define NOTE_CS5 554
+#define NOTE_D5 587
+#define NOTE_DS5 622
+#define NOTE_E5 659
+#define NOTE_F5 698
+#define NOTE_FS5 740
+#define NOTE_G5 784
+#define NOTE_GS5 831
+#define NOTE_A5 880
+#define NOTE_AS5 932
+#define NOTE_B5 988
+#define NOTE_C6 1047
+#define NOTE_CS6 1109
+#define NOTE_D6 1175
+#define NOTE_DS6 1245
+#define NOTE_E6 1319
+#define NOTE_F6 1397
+#define NOTE_FS6 1480
+#define NOTE_G6 1568
+#define NOTE_GS6 1661
+#define NOTE_A6 1760
+#define NOTE_AS6 1865
+#define NOTE_B6 1976
+#define NOTE_C7 2093
+#define NOTE_CS7 2217
+#define NOTE_D7 2349
+#define NOTE_DS7 2489
+#define NOTE_E7 2637
+#define NOTE_F7 2794
+#define NOTE_FS7 2960
+#define NOTE_G7 3136
+#define NOTE_GS7 3322
+#define NOTE_A7 3520
+#define NOTE_AS7 3729
+#define NOTE_B7 3951
+#define NOTE_C8 4186
+#define NOTE_CS8 4435
+#define NOTE_D8 4699
+#define NOTE_DS8 4978
+
+// ═══════════════════════════════════════════════════════
+//   DATOS — PAC-MAN  (tempo 105)
+// ═══════════════════════════════════════════════════════
+const int melody_pacman[] PROGMEM = {
+  NOTE_B4, 16, NOTE_B5, 16, NOTE_FS5, 16, NOTE_DS5, 16,
+  NOTE_B5, 32, NOTE_FS5, -16, NOTE_DS5, 8, NOTE_C5, 16,
+  NOTE_C6, 16, NOTE_G6, 16, NOTE_E6, 16, NOTE_C6, 32,
+  NOTE_G6, -16, NOTE_E6, 8,
+  NOTE_B4, 16, NOTE_B5, 16, NOTE_FS5, 16, NOTE_DS5, 16,
+  NOTE_B5, 32, NOTE_FS5, -16, NOTE_DS5, 8,
+  NOTE_DS5, 32, NOTE_E5, 32, NOTE_F5, 32,
+  NOTE_F5, 32, NOTE_FS5, 32, NOTE_G5, 32,
+  NOTE_G5, 32, NOTE_GS5, 32, NOTE_A5, 16, NOTE_B5, 8
+};
+
+// ═══════════════════════════════════════════════════════
+//   DATOS — FÜR ELISE  (tempo 80)
+// ═══════════════════════════════════════════════════════
+const int melody_furelise[] PROGMEM = {
+  NOTE_E5, 16, NOTE_DS5, 16,
+  NOTE_E5, 16, NOTE_DS5, 16, NOTE_E5, 16, NOTE_B4, 16, NOTE_D5, 16, NOTE_C5, 16,
+  NOTE_A4, -8, NOTE_C4, 16, NOTE_E4, 16, NOTE_A4, 16,
+  NOTE_B4, -8, NOTE_E4, 16, NOTE_GS4, 16, NOTE_B4, 16,
+  NOTE_C5, 8, REST, 16, NOTE_E4, 16, NOTE_E5, 16, NOTE_DS5, 16,
+  NOTE_E5, 16, NOTE_DS5, 16, NOTE_E5, 16, NOTE_B4, 16, NOTE_D5, 16, NOTE_C5, 16,
+  NOTE_A4, -8, NOTE_C4, 16, NOTE_E4, 16, NOTE_A4, 16,
+  NOTE_B4, -8, NOTE_E4, 16, NOTE_C5, 16, NOTE_B4, 16,
+  NOTE_A4, 4, REST, 8,
+  NOTE_E5, 16, NOTE_DS5, 16,
+  NOTE_E5, 16, NOTE_DS5, 16, NOTE_E5, 16, NOTE_B4, 16, NOTE_D5, 16, NOTE_C5, 16,
+  NOTE_A4, -8, NOTE_C4, 16, NOTE_E4, 16, NOTE_A4, 16,
+  NOTE_B4, -8, NOTE_E4, 16, NOTE_GS4, 16, NOTE_B4, 16,
+  NOTE_C5, 8, REST, 16, NOTE_E4, 16, NOTE_E5, 16, NOTE_DS5, 16,
+  NOTE_E5, 16, NOTE_DS5, 16, NOTE_E5, 16, NOTE_B4, 16, NOTE_D5, 16, NOTE_C5, 16,
+  NOTE_A4, -8, NOTE_C4, 16, NOTE_E4, 16, NOTE_A4, 16,
+  NOTE_B4, -8, NOTE_E4, 16, NOTE_C5, 16, NOTE_B4, 16,
+  NOTE_A4, 8, REST, 16, NOTE_B4, 16, NOTE_C5, 16, NOTE_D5, 16,
+  NOTE_E5, -8, NOTE_G4, 16, NOTE_F5, 16, NOTE_E5, 16,
+  NOTE_D5, -8, NOTE_F4, 16, NOTE_E5, 16, NOTE_D5, 16,
+  NOTE_C5, -8, NOTE_E4, 16, NOTE_D5, 16, NOTE_C5, 16,
+  NOTE_B4, 8, REST, 16, NOTE_E4, 16, NOTE_E5, 16, REST, 16,
+  REST, 16, NOTE_E5, 16, NOTE_E6, 16, REST, 16, REST, 16, NOTE_DS5, 16,
+  NOTE_E5, 16, REST, 16, REST, 16, NOTE_DS5, 16, NOTE_E5, 16, NOTE_DS5, 16,
+  NOTE_E5, 16, NOTE_DS5, 16, NOTE_E5, 16, NOTE_B4, 16, NOTE_D5, 16, NOTE_C5, 16,
+  NOTE_A4, 8, REST, 16, NOTE_C4, 16, NOTE_E4, 16, NOTE_A4, 16,
+  NOTE_B4, 8, REST, 16, NOTE_E4, 16, NOTE_GS4, 16, NOTE_B4, 16,
+  NOTE_C5, 8, REST, 16, NOTE_E4, 16, NOTE_E5, 16, NOTE_DS5, 16,
+  NOTE_E5, 16, NOTE_DS5, 16, NOTE_E5, 16, NOTE_B4, 16, NOTE_D5, 16, NOTE_C5, 16,
+  NOTE_A4, 8, REST, 16, NOTE_C4, 16, NOTE_E4, 16, NOTE_A4, 16,
+  NOTE_B4, 8, REST, 16, NOTE_E4, 16, NOTE_C5, 16, NOTE_B4, 16,
+  NOTE_A4, 8, REST, 16, NOTE_B4, 16, NOTE_C5, 16, NOTE_D5, 16,
+  NOTE_E5, -8, NOTE_G4, 16, NOTE_F5, 16, NOTE_E5, 16,
+  NOTE_D5, -8, NOTE_F4, 16, NOTE_E5, 16, NOTE_D5, 16,
+  NOTE_C5, -8, NOTE_E4, 16, NOTE_D5, 16, NOTE_C5, 16,
+  NOTE_B4, 8, REST, 16, NOTE_E4, 16, NOTE_E5, 16, REST, 16,
+  REST, 16, NOTE_E5, 16, NOTE_E6, 16, REST, 16, REST, 16, NOTE_DS5, 16,
+  NOTE_E5, 16, REST, 16, REST, 16, NOTE_DS5, 16, NOTE_E5, 16, NOTE_DS5, 16,
+  NOTE_E5, 16, NOTE_DS5, 16, NOTE_E5, 16, NOTE_B4, 16, NOTE_D5, 16, NOTE_C5, 16,
+  NOTE_A4, 8, REST, 16, NOTE_C4, 16, NOTE_E4, 16, NOTE_A4, 16,
+  NOTE_B4, 8, REST, 16, NOTE_E4, 16, NOTE_GS4, 16, NOTE_B4, 16,
+  NOTE_C5, 8, REST, 16, NOTE_E4, 16, NOTE_E5, 16, NOTE_DS5, 16,
+  NOTE_E5, 16, NOTE_DS5, 16, NOTE_E5, 16, NOTE_B4, 16, NOTE_D5, 16, NOTE_C5, 16,
+  NOTE_A4, 8, REST, 16, NOTE_C4, 16, NOTE_E4, 16, NOTE_A4, 16,
+  NOTE_B4, 8, REST, 16, NOTE_E4, 16, NOTE_C5, 16, NOTE_B4, 16,
+  NOTE_A4, 8, REST, 16, NOTE_C5, 16, NOTE_C5, 16, NOTE_C5, 16,
+  NOTE_C5, 4, NOTE_F5, -16, NOTE_E5, 32,
+  NOTE_E5, 8, NOTE_D5, 8, NOTE_AS5, -16, NOTE_A5, 32,
+  NOTE_A5, 16, NOTE_G5, 16, NOTE_F5, 16, NOTE_E5, 16, NOTE_D5, 16, NOTE_C5, 16,
+  NOTE_AS4, 8, NOTE_A4, 8, NOTE_A4, 32, NOTE_G4, 32, NOTE_A4, 32, NOTE_B4, 32,
+  NOTE_C5, 4, NOTE_D5, 16, NOTE_DS5, 16,
+  NOTE_E5, -8, NOTE_E5, 16, NOTE_F5, 16, NOTE_A4, 16,
+  NOTE_C5, 4, NOTE_D5, -16, NOTE_B4, 32,
+  NOTE_C5, 32, NOTE_G5, 32, NOTE_G4, 32, NOTE_G5, 32,
+  NOTE_A4, 32, NOTE_G5, 32, NOTE_B4, 32, NOTE_G5, 32,
+  NOTE_C5, 32, NOTE_G5, 32, NOTE_D5, 32, NOTE_G5, 32,
+  NOTE_E5, 32, NOTE_G5, 32, NOTE_C6, 32, NOTE_B5, 32,
+  NOTE_A5, 32, NOTE_G5, 32, NOTE_F5, 32, NOTE_E5, 32,
+  NOTE_D5, 32, NOTE_G5, 32, NOTE_F5, 32, NOTE_D5, 32,
+  NOTE_C5, 32, NOTE_G5, 32, NOTE_G4, 32, NOTE_G5, 32,
+  NOTE_A4, 32, NOTE_G5, 32, NOTE_B4, 32, NOTE_G5, 32,
+  NOTE_C5, 32, NOTE_G5, 32, NOTE_D5, 32, NOTE_G5, 32,
+  NOTE_E5, 32, NOTE_G5, 32, NOTE_C6, 32, NOTE_B5, 32,
+  NOTE_A5, 32, NOTE_G5, 32, NOTE_F5, 32, NOTE_E5, 32,
+  NOTE_D5, 32, NOTE_G5, 32, NOTE_F5, 32, NOTE_D5, 32,
+  NOTE_E5, 32, NOTE_F5, 32, NOTE_E5, 32, NOTE_DS5, 32,
+  NOTE_E5, 32, NOTE_B4, 32, NOTE_E5, 32, NOTE_DS5, 32,
+  NOTE_E5, 32, NOTE_B4, 32, NOTE_E5, 32, NOTE_DS5, 32,
+  NOTE_E5, -8, NOTE_B4, 16, NOTE_E5, 16, NOTE_DS5, 16,
+  NOTE_E5, -8, NOTE_B4, 16, NOTE_E5, 16, REST, 16,
+  REST, 16, NOTE_DS5, 16, NOTE_E5, 16, REST, 16, REST, 16, NOTE_DS5, 16,
+  NOTE_E5, 16, NOTE_DS5, 16, NOTE_E5, 16, NOTE_B4, 16, NOTE_D5, 16, NOTE_C5, 16,
+  NOTE_A4, 8, REST, 16, NOTE_C4, 16, NOTE_E4, 16, NOTE_A4, 16,
+  NOTE_B4, 8, REST, 16, NOTE_E4, 16, NOTE_GS4, 16, NOTE_B4, 16,
+  NOTE_C5, 8, REST, 16, NOTE_E4, 16, NOTE_E5, 16, NOTE_DS5, 16,
+  NOTE_E5, 16, NOTE_DS5, 16, NOTE_E5, 16, NOTE_B4, 16, NOTE_D5, 16, NOTE_C5, 16,
+  NOTE_A4, 8, REST, 16, NOTE_C4, 16, NOTE_E4, 16, NOTE_A4, 16,
+  NOTE_B4, 8, REST, 16, NOTE_E4, 16, NOTE_C5, 16, NOTE_B4, 16,
+  NOTE_A4, 8, REST, 16, NOTE_B4, 16, NOTE_C5, 16, NOTE_D5, 16,
+  NOTE_E5, -8, NOTE_G4, 16, NOTE_F5, 16, NOTE_E5, 16,
+  NOTE_D5, -8, NOTE_F4, 16, NOTE_E5, 16, NOTE_D5, 16,
+  NOTE_C5, -8, NOTE_E4, 16, NOTE_D5, 16, NOTE_C5, 16,
+  NOTE_B4, 8, REST, 16, NOTE_E4, 16, NOTE_E5, 16, REST, 16,
+  REST, 16, NOTE_E5, 16, NOTE_E6, 16, REST, 16, REST, 16, NOTE_DS5, 16,
+  NOTE_E5, 16, REST, 16, REST, 16, NOTE_DS5, 16, NOTE_E5, 16, NOTE_D5, 16,
+  NOTE_E5, 16, NOTE_DS5, 16, NOTE_E5, 16, NOTE_B4, 16, NOTE_D5, 16, NOTE_C5, 16,
+  NOTE_A4, 8, REST, 16, NOTE_C4, 16, NOTE_E4, 16, NOTE_A4, 16,
+  NOTE_B4, 8, REST, 16, NOTE_E4, 16, NOTE_GS4, 16, NOTE_B4, 16,
+  NOTE_C5, 8, REST, 16, NOTE_E4, 16, NOTE_E5, 16, NOTE_DS5, 16,
+  NOTE_E5, 16, NOTE_DS5, 16, NOTE_E5, 16, NOTE_B4, 16, NOTE_D5, 16, NOTE_C5, 16,
+  NOTE_A4, 8, REST, 16, NOTE_C4, 16, NOTE_E4, 16, NOTE_A4, 16,
+  NOTE_B4, 8, REST, 16, NOTE_E4, 16, NOTE_C5, 16, NOTE_B4, 16,
+  NOTE_A4, 8, REST, 16, REST, 16, REST, 8,
+  NOTE_CS5, -4,
+  NOTE_D5, 4, NOTE_E5, 16, NOTE_F5, 16,
+  NOTE_F5, 4, NOTE_F5, 8,
+  NOTE_E5, -4,
+  NOTE_D5, 4, NOTE_C5, 16, NOTE_B4, 16,
+  NOTE_A4, 4, NOTE_A4, 8,
+  NOTE_A4, 8, NOTE_C5, 8, NOTE_B4, 8,
+  NOTE_A4, -4,
+  NOTE_CS5, -4,
+  NOTE_D5, 4, NOTE_E5, 16, NOTE_F5, 16,
+  NOTE_F5, 4, NOTE_F5, 8,
+  NOTE_F5, -4,
+  NOTE_DS5, 4, NOTE_D5, 16, NOTE_C5, 16,
+  NOTE_AS4, 4, NOTE_A4, 8,
+  NOTE_GS4, 4, NOTE_G4, 8,
+  NOTE_A4, -4,
+  NOTE_B4, 4, REST, 8,
+  NOTE_A3, -32, NOTE_C4, -32, NOTE_E4, -32, NOTE_A4, -32,
+  NOTE_C5, -32, NOTE_E5, -32, NOTE_D5, -32, NOTE_C5, -32, NOTE_B4, -32,
+  NOTE_A4, -32, NOTE_C5, -32, NOTE_E5, -32, NOTE_A5, -32,
+  NOTE_C6, -32, NOTE_E6, -32, NOTE_D6, -32, NOTE_C6, -32, NOTE_B5, -32,
+  NOTE_A4, -32, NOTE_C5, -32, NOTE_E5, -32, NOTE_A5, -32,
+  NOTE_C6, -32, NOTE_E6, -32, NOTE_D6, -32, NOTE_C6, -32, NOTE_B5, -32,
+  NOTE_AS5, -32, NOTE_A5, -32, NOTE_GS5, -32, NOTE_G5, -32,
+  NOTE_FS5, -32, NOTE_F5, -32, NOTE_E5, -32, NOTE_DS5, -32, NOTE_D5, -32,
+  NOTE_CS5, -32, NOTE_C5, -32, NOTE_B4, -32, NOTE_AS4, -32,
+  NOTE_A4, -32, NOTE_GS4, -32, NOTE_G4, -32, NOTE_FS4, -32, NOTE_F4, -32,
+  NOTE_E4, 16, NOTE_DS5, 16, NOTE_E5, 16, NOTE_B4, 16, NOTE_D5, 16, NOTE_C5, 16,
+  NOTE_A4, -8, NOTE_C4, 16, NOTE_E4, 16, NOTE_A4, 16,
+  NOTE_B4, -8, NOTE_E4, 16, NOTE_GS4, 16, NOTE_B4, 16,
+  NOTE_C5, 8, REST, 16, NOTE_E4, 16, NOTE_E5, 16, NOTE_DS5, 16,
+  NOTE_E5, 16, NOTE_DS5, 16, NOTE_E5, 16, NOTE_B4, 16, NOTE_D5, 16, NOTE_C5, 16,
+  NOTE_A4, -8, NOTE_C4, 16, NOTE_E4, 16, NOTE_A4, 16,
+  NOTE_B4, -8, NOTE_E4, 16, NOTE_C5, 16, NOTE_B4, 16,
+  NOTE_A4, -8, REST, -8,
+  REST, -8, NOTE_G4, 16, NOTE_F5, 16, NOTE_E5, 16,
+  NOTE_D5, 4, REST, 8,
+  REST, -8, NOTE_E4, 16, NOTE_D5, 16, NOTE_C5, 16,
+  NOTE_B4, -8, NOTE_E4, 16, NOTE_E5, 8,
+  NOTE_E5, 8, NOTE_E6, -8, NOTE_DS5, 16,
+  NOTE_E5, 16, REST, 16, REST, 16, NOTE_DS5, 16, NOTE_E5, 16, NOTE_DS5, 16,
+  NOTE_E5, 16, NOTE_DS5, 16, NOTE_E5, 16, NOTE_B4, 16, NOTE_D5, 16, NOTE_C5, 16,
+  NOTE_A4, -8, NOTE_C4, 16, NOTE_E4, 16, NOTE_A4, 16,
+  NOTE_B4, -8, NOTE_E4, 16, NOTE_GS4, 16, NOTE_B4, 16,
+  NOTE_C5, 8, REST, 16, NOTE_E4, 16, NOTE_E5, 16, NOTE_DS5, 16,
+  NOTE_E5, 16, NOTE_DS5, 16, NOTE_E5, 16, NOTE_B4, 16, NOTE_D5, 16, NOTE_C5, 16,
+  NOTE_A4, -8, NOTE_C4, 16, NOTE_E4, 16, NOTE_A4, 16,
+  NOTE_B4, -8, NOTE_E4, 16, NOTE_C5, 16, NOTE_B4, 16,
+  NOTE_A4, -4
+};
+
+// ═══════════════════════════════════════════════════════
+//   DATOS — THE LEGEND OF ZELDA  (tempo 88)
+// ═══════════════════════════════════════════════════════
+const int melody_zelda[] PROGMEM = {
+  NOTE_AS4, -2, NOTE_F4, 8, NOTE_F4, 8, NOTE_AS4, 8,
+  NOTE_GS4, 16, NOTE_FS4, 16, NOTE_GS4, -2,
+  NOTE_AS4, -2, NOTE_FS4, 8, NOTE_FS4, 8, NOTE_AS4, 8,
+  NOTE_A4, 16, NOTE_G4, 16, NOTE_A4, -2,
+  REST, 1,
+  NOTE_AS4, 4, NOTE_F4, -4, NOTE_AS4, 8, NOTE_AS4, 16,
+  NOTE_C5, 16, NOTE_D5, 16, NOTE_DS5, 16,
+  NOTE_F5, 2, NOTE_F5, 8, NOTE_F5, 8, NOTE_F5, 8,
+  NOTE_FS5, 16, NOTE_GS5, 16,
+  NOTE_AS5, -2, NOTE_AS5, 8, NOTE_AS5, 8, NOTE_GS5, 8, NOTE_FS5, 16,
+  NOTE_GS5, -8, NOTE_FS5, 16, NOTE_F5, 2, NOTE_F5, 4,
+  NOTE_DS5, -8, NOTE_F5, 16, NOTE_FS5, 2, NOTE_F5, 8, NOTE_DS5, 8,
+  NOTE_CS5, -8, NOTE_DS5, 16, NOTE_F5, 2, NOTE_DS5, 8, NOTE_CS5, 8,
+  NOTE_C5, -8, NOTE_D5, 16, NOTE_E5, 2, NOTE_G5, 8,
+  NOTE_F5, 16, NOTE_F4, 16, NOTE_F4, 16, NOTE_F4, 16,
+  NOTE_F4, 16, NOTE_F4, 16, NOTE_F4, 16, NOTE_F4, 16,
+  NOTE_F4, 8, NOTE_F4, 16, NOTE_F4, 8,
+  NOTE_AS4, 4, NOTE_F4, -4, NOTE_AS4, 8, NOTE_AS4, 16,
+  NOTE_C5, 16, NOTE_D5, 16, NOTE_DS5, 16,
+  NOTE_F5, 2, NOTE_F5, 8, NOTE_F5, 8, NOTE_F5, 8,
+  NOTE_FS5, 16, NOTE_GS5, 16,
+  NOTE_AS5, -2, NOTE_CS6, 4,
+  NOTE_C6, 4, NOTE_A5, 2, NOTE_F5, 4,
+  NOTE_FS5, -2, NOTE_AS5, 4,
+  NOTE_A5, 4, NOTE_F5, 2, NOTE_F5, 4,
+  NOTE_FS5, -2, NOTE_AS5, 4,
+  NOTE_A5, 4, NOTE_F5, 2, NOTE_D5, 4,
+  NOTE_DS5, -2, NOTE_FS5, 4,
+  NOTE_F5, 4, NOTE_CS5, 2, NOTE_AS4, 4,
+  NOTE_C5, -8, NOTE_D5, 16, NOTE_E5, 2, NOTE_G5, 8,
+  NOTE_F5, 16, NOTE_F4, 16, NOTE_F4, 16, NOTE_F4, 16,
+  NOTE_F4, 16, NOTE_F4, 16, NOTE_F4, 16, NOTE_F4, 16,
+  NOTE_F4, 8, NOTE_F4, 16, NOTE_F4, 8
+};
+
+
+
+
+class BUZZER_SOUND_SYSTEM {
+private:
+
+  int PIN_CREATOR;
+
+public:
+  BUZZER_SOUND_SYSTEM(int PIN)
+    : PIN_CREATOR(PIN) {
+
+    pinMode(PIN, OUTPUT);
+  }
+  void SOUND_POWER_ON_OFF() {
+
+    tone(PIN_CREATOR, 4100, 150);
+  }
+
+  void SOUND_ERROR() {
+    for (int NUMBER_REPETICION = 0; NUMBER_REPETICION < 3; NUMBER_REPETICION++) {
+      delay(170);
+      tone(PIN_CREATOR, 4100, 122);
+    }
+    
+   
+  }
+  void _play(const int* mel, int n, int tempo) {
+    int wholenote = (60000 * 4) / tempo;
+    for (int i = 0; i < n * 2; i += 2) {
+      int pitch = pgm_read_word_near(mel + i);
+      int divider = pgm_read_word_near(mel + i + 1);
+      int dur = (divider > 0)
+                  ? wholenote / divider
+                  : (int)((wholenote / abs(divider)) * 1.5);
+      tone(PIN_CREATOR, pitch, (int)(dur * 0.9));
+      delay(dur);
+      noTone(PIN_CREATOR);
+    }
+  }
+
+  void SOUND_TEST() {
+    for (int i = 0; i <= 10; i++) {
+
+      tone(PIN_CREATOR, 2000, 150);
+    }
+  }
+
+  void FureElise() {
+    _play(melody_furelise,
+          sizeof(melody_furelise) / sizeof(melody_furelise[0]) / 2, 80);
+  }
+  void PacMan() {
+    _play(melody_pacman, sizeof(melody_pacman) / sizeof(melody_pacman[0]) / 2, 105);
+  }
+
+  void playZelda() {
+    _play(melody_zelda, sizeof(melody_zelda) / sizeof(melody_zelda[0]) / 2, 88);
+  }
+};
+
+//INCIALIZACION DE LA CLASE
+BUZZER_SOUND_SYSTEM BUZZER(CONFIG_GENERALES_HARDWARE.PIN_BUZZER);
+// FUNCION CLASS OOP ENCENDIDO INDICADOR
+
+class STANDBY_SYSTEM {
+private:
+  int PIN_OFF, PIN_ON;
+public:
+  STANDBY_SYSTEM(int ROJO, int VERDE)
+    : PIN_OFF(ROJO), PIN_ON(VERDE) {  // UTILIZE : PARA INICIALIZAR DATOS EN VEZ DE ASIGNAR CON = ;MAYOR EFICIENCIA Y RAPIDZ
+
+    //MODO DE COMPORTAMIENTO PINES
+    pinMode(PIN_OFF, OUTPUT);
+    pinMode(PIN_ON, OUTPUT);
+  }
+  //NOTA: AL UTILIZAR DIGITALWRITE CON ARGUMENTOS COMO NUMERO_PIN , HIGH(5V) O LOW(0V) VA CAMBIAR DE ESTADO PRENDIDO Y APAGADO UNICAMENTE
+  // SI DESEAMOS CONFIGURAR BRILLO CAMBIAR PINES A PIN PWM ~ CON ESE SIMBOLO Y UTILIZAR ANALOGWRITE RANGO 0 ~255
+  void MODE_STAND_BY() {
+
+    digitalWrite(PIN_OFF, HIGH);
+    digitalWrite(PIN_ON, LOW);
+  }
+
+  void MODE_POWER_ON() {
+
+    digitalWrite(PIN_ON, HIGH);
+    digitalWrite(PIN_OFF, LOW);
+  }
+};
+
+//INCIALIAZACION DE LA CALSE STAND BY SISTEM
+STANDBY_SYSTEM POWER_SYSTEM_LED(CONFIG_GENERALES_HARDWARE.PIN_LED_POWER_OFF, CONFIG_GENERALES_HARDWARE.PIN_LED_POWER_ON);
+
+
+
+
+
+
+// CANTIDAD DE ESTADOS PARA LA CALSE//
+
+enum SYSTEM_STATE {
+  STATE_SYSTEM_POWER_OFF,
+  STATE_SYSTEM_POWER_ON,
+  STATE_SYSTEM_POWER_STAND_BY,
+};
+
+
+
+
+
+
+// FUNCION CLASS OOP CORE SYSTEM INICALIZACION
+
+class SYNCRONICED_SYSTEM {
+private:
+  SYSTEM_STATE ESTADO_ACTUAL;
+public:
+
+  // CONSTRUCTOR DE LA CLASE //
+
+  SYNCRONICED_SYSTEM()
+    : ESTADO_ACTUAL(STATE_SYSTEM_POWER_OFF) {}
+  SYSTEM_STATE CONSULTAR_STATE() {
+    return ESTADO_ACTUAL;
+  }
+
+  // FUNCION PRINCIPAL DE ENCENDIDO //
+  void POWER_ON_SYSTEM() {
+    ESTADO_ACTUAL = STATE_SYSTEM_POWER_ON;
+    POWER_SYSTEM_LED.MODE_POWER_ON();
+    BUZZER.SOUND_POWER_ON_OFF();
+
+    LOG_I("CORE NEPTUNE POWER ON")
+  }
+
+
+  // FUNCION PRINCIPAL DE APAGADO //
+
+  void POWER_OFF_SYSTEM() {
+    ESTADO_ACTUAL = STATE_SYSTEM_POWER_OFF;
+    POWER_SYSTEM_LED.MODE_STAND_BY();
+    BUZZER.SOUND_POWER_ON_OFF();
+    LOG_I("CORE NEPTUNE POWER OFF");
+  }
+
+  // FUNCION RESET ///
+  void POWER_RESET_SYSTEM() {
+    POWER_SYSTEM_LED.MODE_STAND_BY();
+    BUZZER.SOUND_ERROR();
+  }
+  void RESET_SYSTEM() {
+    ESTADO_ACTUAL = STATE_SYSTEM_POWER_OFF;
+    POWER_RESET_SYSTEM();
+    delay(4000);
+    POWER_ON_SYSTEM();
+    LOG_I("CORE SUCCESSFULY RESET - INICALIZING SISTEM ");
+  }
+  
+
+  // AMPLIACION DE FUNCIONES
+};
+
+SYNCRONICED_SYSTEM MANAGER_ENERGY;  // INICIALIZACION DE LA CLASE PASANDO VARIABLE
+
+class Servo_Funcion {
+private:
+  
+  int PIN_SERVO_CREATOR;
+  Servo miservo;
+public:
+  Servo_Funcion(int pin): PIN_SERVO_CREATOR(pin){}
+
+  void INICIALIZACION_SERVO() {
+    miservo.attach(PIN_SERVO_CREATOR);
+  }
+  void SERVO_INICIO_UP() {
+    
+      miservo.write(90);
+  
+  }
+
+  void SERVO_INICIO_DOWN() {
+
+    miservo.write(0);
+  }
+};
+
+Servo_Funcion SERVO(CONFIG_GENERALES_HARDWARE.PIN_SERVO_RAMPA);
+
+class CORE_SYSTEM {
+private:
+  enum CORE_STATE { STATE_STAND_BY, EXECUTING };
+  CORE_STATE _estado;
+
+  bool          _lastBoton;
+  unsigned long _tPresionado;
+  bool          _enConteo;
+
+  // ── Mide cuánto tiempo se sostuvo el botón ────────────────────────────
+  unsigned long _leerDuracion() {
+    bool lectura = digitalRead(CONFIG_GENERALES_HARDWARE.PIN_BOTON_START);
+
+    if (lectura == LOW && _lastBoton == HIGH) {   // flanco bajada → inicia conteo
+      _tPresionado = millis();
+      _enConteo    = true;
+    }
+
+    if (lectura == HIGH && _lastBoton == LOW && _enConteo) {  // flanco subida → mide
+      _enConteo  = false;
+      _lastBoton = lectura;
+      unsigned long duracion = millis() - _tPresionado;
+      if (duracion < CONFIG_GENERALES_HARDWARE.DEBOUNCE_DELAY) return 0; // rebote
+      return duracion;
+    }
+
+    _lastBoton = lectura;
+    return 0;
+  }
+
+  // ── Transiciones ──────────────────────────────────────────────────────
+  void _irAStandBy() {
+    _estado = STATE_STAND_BY;
+    MANAGER_ENERGY.POWER_OFF_SYSTEM();
+    SERVO.SERVO_INICIO_DOWN();
+    LOG_I("CORE: → STAND_BY");
+  }
+
+  void _irAEjecutando() {
+    _estado = EXECUTING;
+    MANAGER_ENERGY.POWER_ON_SYSTEM();
+    SERVO.SERVO_INICIO_UP();
+    delay(350);
+    BUZZER.PacMan();
+    delay(4000);
+    BUZZER.FureElise(); 
+    LOG_I("CORE: → EXECUTING");
+  }
+
+public:
+  CORE_SYSTEM()
+    : _estado(STATE_STAND_BY),
+      _lastBoton(HIGH),
+      _tPresionado(0),
+      _enConteo(false) {}
+
+  void Inicializar() {
+    pinMode(CONFIG_GENERALES_HARDWARE.PIN_BOTON_START,             INPUT_PULLUP);
+    pinMode(CONFIG_GENERALES_HARDWARE.PIN_SENSOR_IR,               INPUT);
+    pinMode(CONFIG_GENERALES_HARDWARE.PIN_SENSOR_PRESION_INFERIOR, INPUT);
+    SERVO.INICIALIZACION_SERVO();
+    _irAStandBy();
+    LOG_I("CORE: Hardware inicializado");
+  }
+
+  void Actualizar() {
+    unsigned long duracion = _leerDuracion();
+
+    if (duracion == 0) return;  // sin evento de botón
+
+    if (duracion >= CONFIG_GENERALES_HARDWARE.TIME_RESET_TIME) {
+      // ── PULSACIÓN LARGA → RESET ────────────────────────────────────
+      LOG_W("CORE: Reset por pulsacion larga");
+      MANAGER_ENERGY.RESET_SYSTEM();
+      _irAStandBy();
+
+    } else {
+      // ── PULSACIÓN CORTA → TOGGLE ───────────────────────────────────
+      if (_estado == STATE_STAND_BY) {
+        _irAEjecutando();
+      } else {
+        _irAStandBy();
+      }
+    }
+  }
+};
+
+CORE_SYSTEM CORE;
+
+void setup() {
+  Serial.begin(9600);
+  CORE.Inicializar();
+}
+
+void loop() {
+  CORE.Actualizar();
+}
+
