@@ -1,48 +1,156 @@
-# Security Policy
+# SECURITY.md — Security Policy
 
-## Supported Versions
-
-Este proyecto es mantenido por **Jounadev**.  
-Solo las versiones activamente soportadas recibirán actualizaciones de seguridad.
-
-| Version | Supported          |
-| ------- | ------------------ |
-| 1.0.x   | :white_check_mark: |
-| 0.9.x   | :white_check_mark: |
-| 0.8.x   | :x:                |
-| < 0.8   | :x:                |
-
-> Nota: Las versiones antiguas pueden contener vulnerabilidades conocidas
-y no recibirán parches de seguridad.
+**Project Maintainer:** Jounadev  
+**Security Program Level:** Production-Grade Controlled Disclosure Policy  
+**Last Updated:** 2026-05-24
 
 ---
 
-## Reporting a Vulnerability
+# 1. Supported Versions
 
-Si encuentras una vulnerabilidad de seguridad, por favor repórtala de forma responsable.
+Only actively maintained versions receive security updates, patches, and hotfixes.
 
-### 📩 Cómo reportar:
-Envía los detalles a:
-- Email: security@jounadev.dev *(puedes cambiarlo)*
-- O canal privado de contacto del proyecto
+| Version Range | Status               | Security Support |
+|--------------|---------------------|------------------|
+| 2.0.x        | Stable (current)     | :white_check_mark: |
+| 1.5.x        | Legacy LTS           | :white_check_mark: |
+| 1.0.x        | Deprecated           | :x:               |
+| < 1.0        | End of Life (EOL)    | :x:               |
 
-### ⏱ Tiempo de respuesta:
-- Confirmación inicial: dentro de 48-72 horas
-- Evaluación del problema: 3-7 días hábiles
-- Corrección (si aplica): depende de la severidad
-
-### 🔒 Qué esperar:
-- Si la vulnerabilidad es válida, será corregida en una actualización.
-- Si no es válida o no representa riesgo, será cerrada con explicación.
-- No se publicarán detalles sensibles hasta que el problema esté resuelto.
+> ⚠️ End-of-life versions are considered unsafe and may contain known vulnerabilities.
 
 ---
 
-## Responsible Disclosure
+# 2. Security Principles
 
-Se solicita no hacer públicos los exploits antes de que exista un parche,
-para proteger a los usuarios del sistema.
+This project follows strict security principles:
+
+- **Least privilege execution model**
+- **No trust of external inputs by default**
+- **Input validation at all system boundaries**
+- **Defense-in-depth architecture**
+- **Tamper-aware design where applicable**
+- **Deterministic execution for critical modules**
 
 ---
 
-© 2026 Jounadev — All rights reserved.
+# 3. Vulnerability Classification (Severity Model)
+
+We classify vulnerabilities using a CVSS-inspired internal model:
+
+| Severity | Impact Description | Response Time |
+|----------|-------------------|---------------|
+| CRITICAL | Remote code execution, system compromise, data breach | 24–72 hours |
+| HIGH     | Privilege escalation, major logic bypass | 3–5 days |
+| MEDIUM   | Partial data exposure, non-critical bypass | 7–14 days |
+| LOW      | Minor issues, non-exploitable weaknesses | Next release cycle |
+| INFO     | Hardening suggestions | Optional |
+
+---
+
+# 4. Reporting a Vulnerability
+
+We strongly encourage **responsible disclosure**.
+
+## 📩 Secure Reporting Channels
+
+Report vulnerabilities privately via:
+
+- Email: security@jounadev.dev *(recommended)*
+- Encrypted channel (if available)
+- Private project contact channel
+
+> DO NOT disclose vulnerabilities publicly before coordination.
+
+---
+
+# 5. What to Include in a Report
+
+To accelerate triage, include:
+
+- Clear description of the vulnerability
+- Affected version(s)
+- Steps to reproduce
+- Proof of concept (PoC) if possible
+- Potential impact analysis
+- Suggested mitigation (optional)
+
+---
+
+# 6. Response Lifecycle
+
+Once a report is submitted:
+
+### Phase 1 — Acknowledgement
+- Response within **48–72 hours**
+- Ticket is created and tracked internally
+
+### Phase 2 — Validation
+- Security team verifies reproducibility
+- Severity classification assigned
+
+### Phase 3 — Remediation
+- Patch development begins
+- Hotfix or scheduled release depending on severity
+
+### Phase 4 — Disclosure Coordination
+- Reporter is credited (if desired)
+- Public advisory released after fix is deployed
+
+---
+
+# 7. Disclosure Policy
+
+We follow **Coordinated Vulnerability Disclosure (CVD)**:
+
+- No public disclosure until patch is available
+- Embargo period may apply for critical issues
+- Researchers are expected to avoid exploitation or data access beyond PoC scope
+
+---
+
+# 8. Out of Scope
+
+The following are NOT considered vulnerabilities:
+
+- Theoretical attacks without proof of exploitability
+- Social engineering against users
+- Physical attacks on infrastructure
+- Issues in unsupported third-party dependencies (unless exploitable within system context)
+- Misconfiguration outside documented deployment model
+
+---
+
+# 9. Security Rewards (Optional / Future Program)
+
+A bounty program may be introduced in future versions:
+
+- Critical: reward tier A
+- High: reward tier B
+- Medium: reward tier C
+
+(Currently not active unless explicitly announced)
+
+---
+
+# 10. Legal Protection Clause
+
+Unauthorized access, exploitation, reverse engineering, or tampering
+with security mechanisms may result in:
+
+- Permanent restriction from system access
+- Legal action under applicable cybersecurity laws
+- Blacklisting from future services
+
+---
+
+# 11. Security Philosophy
+
+Security is not a feature — it is a system constraint.
+
+All contributions must respect the integrity of the architecture.
+
+---
+
+© 2026 Jounadev — Security Division
+All rights reserved.
